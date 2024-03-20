@@ -29,6 +29,11 @@ struct Foo {
     }
 };
 
+template<typename Input, typename Intermediate, typename Output>
+static RunnablePtr<Input,Output> pipe_runable(const RunnablePtr<Input, Intermediate>& first, const RunnablePtr<Input, Intermediate>& second) {
+    return std::make_shared<SequenceChain<Input,Output>>();
+}
+
 
 int main()
 {

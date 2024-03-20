@@ -16,5 +16,7 @@ public:
     virtual Output Invoke(const Input& input) = 0;
 };
 
+template<typename Input, typename Output>
+using RunnablePtr = std::shared_ptr<IRunnable<Input,Output>>;
 
 #endif //IRUNNABLE_HPP

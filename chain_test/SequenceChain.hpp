@@ -19,6 +19,9 @@
 //
 // };
 
+
+// ConversionFromContext<Input>
+// ConversionToContext<Output>
 template<typename Input, typename Output>
 class SequenceChain: public IRunnable<Input, Output> {
     std::vector<ChainablePtr> chains_;
