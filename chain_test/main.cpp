@@ -4,47 +4,81 @@
 #include <assert.h>
 #include <iostream>
 
-#include "AlphaJob.hpp"
-#include "BetaJob.hpp"
-#include "HashMapContext.hpp"
-#include "IChainContext.hpp"
-#include "SequenceChain.hpp"
+#include "IFunctionContext.hpp"
+#include "MappingSteps.hpp"
+#include "RunnableChain.hpp"
+#include "SequenceSteps.hpp"
 
-struct Foo {
-    std::string input;
-    std::string alpha;
-    std::string beta;
 
-    void DumpContext(const ContextPtr& context) const {
-        // ContextPtr context = std::make_shared<HashMapContext>();
-        context->SetString("input", input);
-        // return context;
-    }
-
-    static Foo Create(const ContextPtr& context) {
-        return  {
-            .alpha = context->GetString("alpha_output", ""),
-            .beta = context->GetString("beta_output", "")
-        };
+class StepA: public IStepFunction<> {
+public:
+    void Invoke(std::shared_ptr<IFunctionContext<nlohmann::basic_json<>>>& context) override {
+        context->MutablePayload()["stepA_output"] = "hello " + context->MutablePayload()["input"].get<std::string>();
     }
 };
 
-template<typename Input, typename Intermediate, typename Output>
-static RunnablePtr<Input,Output> pipe_runable(const RunnablePtr<Input, Intermediate>& first, const RunnablePtr<Input, Intermediate>& second) {
-    return std::make_shared<SequenceChain<Input,Output>>();
-}
+class StepB: public IStepFunction<> {
+public:
+    void Invoke(std::shared_ptr<IFunctionContext<nlohmann::basic_json<>>>& context) override {
+        const auto input = context->MutablePayload().at("stepA_output").get<std::string>();
+        context->MutablePayload()["output"] = (input + input + input);
+    }
+};
+
+class StepC: public IStepFunction<> {
+public:
+    void Invoke(std::shared_ptr<IFunctionContext<nlohmann::basic_json<>>>& context) override {
+        const auto input = context->MutablePayload()["input"].get<std::string>();
+        auto output = input + input + input;
+        context->MutablePayload()["stepC_output"] = output;
+        context->MutablePayload()["output"] = output;
+    }
+};
+
+class StringInputConverter: public IRunnable<std::string, JSONObjectContextPtr> {
+public:
+    std::shared_ptr<IFunctionContext<nlohmann::basic_json<>>> Invoke(const std::string& input) override {
+        auto ctx = std::make_shared<JSONObjectFuncContext>();
+        ctx->MutablePayload()["input"] = input;
+        return ctx;
+    }
+};
+
+class StringOutputConvter: public IRunnable<JSONObjectContextPtr, std::string> {
+public:
+    std::string Invoke(const std::shared_ptr<IFunctionContext<nlohmann::basic_json<>>>& input) override {
+        auto a_plus_b = input->MutablePayload().at(nlohmann::json::json_pointer("/a_plus_b/output")).get<std::string>();
+        auto c = input->MutablePayload().at(nlohmann::json::json_pointer("/c/output")).get<std::string>();
+        return "a_plus_b=" + a_plus_b + ",c=" + c;
+    }
+};
 
 
 int main()
 {
-    ChainablePtr alpha_job = std::make_shared<AlphaJob>();
-    ChainablePtr beta_job = std::make_shared<BetaJob>();
-    SequenceChain<Foo, Foo> sequence_chain({alpha_job, beta_job});
+    StepFunctionPtr step_a = std::make_shared<StepA>();
+    StepFunctionPtr step_b = std::make_shared<StepB>();
+    StepFunctionPtr step_c = std::make_shared<StepC>();
+    StepFunctionPtr sequence_steps = std::make_shared<SequenceSteps>( std::vector {step_a, step_b});
+    StepFunctionPtr mapping_steps = std::make_shared<MappingSteps>(std::unordered_map<std::string, StepFunctionPtr> {
+        {"a_plus_b", sequence_steps},
+        {"c", step_c}
+    });
+    ContextPtr<nlohmann::json> context = std::make_shared<JSONObjectFuncContext>( nlohmann::json{ {"input", "hello"}});
+    mapping_steps->Invoke(context);
 
-    Foo foo = sequence_chain.Invoke({.input = "hello"});
+    std::cout << context->MutablePayload().dump() << std::endl;
 
-    assert(foo.alpha == "hello");
-    assert(foo.beta == "hellohello");
+
+    auto input_conv = std::make_shared<StringInputConverter>();
+    auto output_conv = std::make_shared<StringOutputConvter>();
+    auto chain = std::make_shared<RunnableChain<std::string, std::string>>(
+        input_conv,
+        output_conv,
+        mapping_steps
+        );
+    auto result = chain->Invoke("nice boy");
+    std::cout << result << std::endl;
 
     return 0;
 }

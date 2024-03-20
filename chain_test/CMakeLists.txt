@@ -3,13 +3,16 @@ project(chain_test)
 
 set(CMAKE_CXX_STANDARD 20)
 
+find_package(nlohmann_json)
+
 add_executable(main
         main.cpp
-        IChainable.hpp
+        IStepFunction.hpp
         IRunnable.hpp
-        SequenceChain.hpp
-        MappingChain.hpp
-        IChainContext.hpp
-        HashMapContext.hpp
-        AlphaJob.hpp
-        BetaJob.hpp)
+        SequenceSteps.hpp
+        MappingSteps.hpp
+        IFunctionContext.hpp
+        JSONObjectFuncContext.hpp
+        RunnableChain.hpp)
+
+target_link_libraries(main nlohmann_json::nlohmann_json)
