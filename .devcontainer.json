@@ -1,1 +1,1 @@
-{"image":  "ghcr.io/jakoch/cpp-devbox:bookworm-latest"}
+{"image":"mcr.microsoft.com/devcontainers/miniconda:ubuntu"}
