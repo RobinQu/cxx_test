@@ -33,4 +33,10 @@ public:
     }
 };
 
+template<
+    typename Input,
+    typename Output
+>
+using ChainPtr = std::shared_ptr<RunnableChain<Input, Output>>;
+
 #endif //RUNNABLECHAIN_HPP

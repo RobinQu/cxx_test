@@ -13,6 +13,7 @@ add_executable(main
         MappingSteps.hpp
         IFunctionContext.hpp
         JSONObjectFuncContext.hpp
-        RunnableChain.hpp)
+        RunnableChain.hpp
+        ChainBuilder.hpp)
 
 target_link_libraries(main nlohmann_json::nlohmann_json)

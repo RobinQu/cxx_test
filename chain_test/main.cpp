@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <iostream>
 
+#include "ChainBuilder.hpp"
 #include "IFunctionContext.hpp"
 #include "MappingSteps.hpp"
 #include "RunnableChain.hpp"
@@ -54,6 +55,11 @@ public:
 };
 
 
+StepFunctionPtr operator|(const StepFunctionPtr& first, const StepFunctionPtr& second) {
+    return std::make_shared<SequenceSteps>(std::vector {first, second});
+}
+
+
 int main()
 {
     StepFunctionPtr step_a = std::make_shared<StepA>();
@@ -68,8 +74,6 @@ int main()
     mapping_steps->Invoke(context);
 
     std::cout << context->MutablePayload().dump() << std::endl;
-
-
     auto input_conv = std::make_shared<StringInputConverter>();
     auto output_conv = std::make_shared<StringOutputConvter>();
     auto chain = std::make_shared<RunnableChain<std::string, std::string>>(
@@ -79,6 +83,14 @@ int main()
         );
     auto result = chain->Invoke("nice boy");
     std::cout << result << std::endl;
+    auto chain_builder = ChainBuilder<std::string, std::string>::Create();
+    chain_builder->WithMappingStep("a_plus_b", step_a | step_b);
+    chain_builder->WithMappingStep("c", step_c);
+    auto chain2 = chain_builder->Build();
+    auto result2 = chain->Invoke("nice boy");
+    std::cout << result2 << std::endl;
+    assert(result == result2);
+
 
     return 0;
 }
