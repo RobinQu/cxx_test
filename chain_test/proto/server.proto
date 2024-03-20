@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+
+message FooRequest {
+
+}
+
+message FooResponse {
+
+}

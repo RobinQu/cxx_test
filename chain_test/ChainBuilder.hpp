@@ -70,6 +70,8 @@ public:
             FinishMappingSteps();
         }
         assert(!steps_.empty());
+        assert(output_converter_);
+        assert(input_converter_);
         return std::make_shared<RunnableChain<Input, Output>>(
             input_converter_,
             output_converter_,

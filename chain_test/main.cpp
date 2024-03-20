@@ -1,7 +1,7 @@
 //
 // Created by RobinQu on 2024/3/20.
 //
-#include <assert.h>
+#include <cassert>
 #include <iostream>
 
 #include "ChainBuilder.hpp"
@@ -14,15 +14,16 @@
 class StepA: public IStepFunction<> {
 public:
     void Invoke(std::shared_ptr<IFunctionContext<nlohmann::basic_json<>>>& context) override {
-        context->MutablePayload()["stepA_output"] = "hello " + context->MutablePayload()["input"].get<std::string>();
+        auto input = JSONObjectFuncContext::Get<std::string>(context, "input");
+        JSONObjectFuncContext::Set(context, "stepA_output", "hello " + input);
     }
 };
 
 class StepB: public IStepFunction<> {
 public:
     void Invoke(std::shared_ptr<IFunctionContext<nlohmann::basic_json<>>>& context) override {
-        const auto input = context->MutablePayload().at("stepA_output").get<std::string>();
-        context->MutablePayload()["output"] = (input + input + input);
+        const auto input = JSONObjectFuncContext::Get<std::string>(context, "stepA_output");
+        JSONObjectFuncContext::Set(context, "output", input + input + input);
     }
 };
 
@@ -40,7 +41,7 @@ class StringInputConverter: public IRunnable<std::string, JSONObjectContextPtr> 
 public:
     std::shared_ptr<IFunctionContext<nlohmann::basic_json<>>> Invoke(const std::string& input) override {
         auto ctx = std::make_shared<JSONObjectFuncContext>();
-        ctx->MutablePayload()["input"] = input;
+        JSONObjectFuncContext::Set(ctx, "input", input);
         return ctx;
     }
 };
@@ -48,8 +49,8 @@ public:
 class StringOutputConvter: public IRunnable<JSONObjectContextPtr, std::string> {
 public:
     std::string Invoke(const std::shared_ptr<IFunctionContext<nlohmann::basic_json<>>>& input) override {
-        auto a_plus_b = input->MutablePayload().at(nlohmann::json::json_pointer("/a_plus_b/output")).get<std::string>();
-        auto c = input->MutablePayload().at(nlohmann::json::json_pointer("/c/output")).get<std::string>();
+        auto a_plus_b = JSONObjectFuncContext::GetPath<std::string>(input, "/a_plus_b/output");
+        auto c = JSONObjectFuncContext::GetPath<std::string>(input, "/c/output");
         return "a_plus_b=" + a_plus_b + ",c=" + c;
     }
 };
@@ -73,6 +74,7 @@ int main()
     ContextPtr<nlohmann::json> context = std::make_shared<JSONObjectFuncContext>( nlohmann::json{ {"input", "hello"}});
     mapping_steps->Invoke(context);
 
+    // manually chain building
     std::cout << context->MutablePayload().dump() << std::endl;
     auto input_conv = std::make_shared<StringInputConverter>();
     auto output_conv = std::make_shared<StringOutputConvter>();
@@ -83,6 +85,8 @@ int main()
         );
     auto result = chain->Invoke("nice boy");
     std::cout << result << std::endl;
+
+    // with ChainBuilder
     auto chain_builder = ChainBuilder<std::string, std::string>::Create();
     chain_builder->WithMappingStep("a_plus_b", step_a | step_b);
     chain_builder->WithMappingStep("c", step_c);
@@ -90,7 +94,5 @@ int main()
     auto result2 = chain->Invoke("nice boy");
     std::cout << result2 << std::endl;
     assert(result == result2);
-
-
     return 0;
 }
