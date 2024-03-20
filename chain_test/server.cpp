@@ -45,6 +45,7 @@ int main() {
     auto chain = builder->Build();
 
     Server server;
+    server.set_tcp_nodelay(true);
     server.Post("/foo", [&](const Request& request, Response& response) {
         Arena arena;
         // auto foo_request = Arena::Create<FooRequest>(&arena);
@@ -55,8 +56,12 @@ int main() {
         response.set_content(output, "text/plain");
     });
 
+    server.Get("/bar", [](const Request& request, Response& response) {
+        response.set_content("foobar", "text/plain");
+    });
+
     int port = 9999;
-    if(server.bind_to_port("localhost", port)) {
+    if(server.bind_to_port("0.0.0.0", port)) {
         std::cout << "server is up and running at " << port << std::endl;
         server.listen_after_bind();
         return 0;
