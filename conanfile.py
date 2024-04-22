@@ -21,6 +21,8 @@ class CXXTestRecipe(ConanFile):
         self.requires("nlohmann_json/3.11.3")
         self.requires("protobuf/3.21.12")
         self.requires("cpp-httplib/0.15.3")
+        # self.requires("jinja2cpp/1.2.1")
+        self.requires("inja/3.4.0")
 
     def layout(self):
         cmake_layout(self)
