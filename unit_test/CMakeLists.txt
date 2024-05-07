@@ -9,9 +9,24 @@ find_package(protobuf)
 find_package(inja REQUIRED)
 
 
+add_library(proto-test OBJECT proto/test.proto)
+target_link_libraries(proto-test PUBLIC
+        protobuf::libprotoc
+        protobuf::libprotobuf
+)
+set(PROTO_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+target_include_directories(proto-test PUBLIC "$<BUILD_INTERFACE:${PROTO_BINARY_DIR}>")
+
+protobuf_generate(
+        TARGET proto-test
+        IMPORT_DIRS "${CMAKE_CURRENT_LIST_DIR}/proto"
+        PROTOC_OUT_DIR "${PROTO_BINARY_DIR}"
+)
+
+
 # from list of files we'll create tests test_name.cpp -> test_name
 foreach(_test_file ${TEST_SRC_FILES})
     get_filename_component(_test_name ${_test_file} NAME_WE)
     add_executable(${_test_name} ${_test_file})
-    target_link_libraries(${_test_name} nlohmann_json::nlohmann_json protobuf::protobuf pantor::inja)
+    target_link_libraries(${_test_name} PUBLIC nlohmann_json::nlohmann_json protobuf::protobuf pantor::inja proto-test)
 endforeach()
