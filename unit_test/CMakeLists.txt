@@ -4,9 +4,20 @@ project(unit_test)
 set(CMAKE_CXX_STANDARD 20)
 
 file(GLOB_RECURSE TEST_SRC_FILES *.cpp)
+#set(TEST_SRC_FILES
+#        json_test.cpp
+#        regex_test.cpp
+#        regex_test_2.cpp
+#        regex_test_3.cpp
+#        stdlib_test.cpp
+#        test_any.cpp
+#        test_timestamp.cpp
+#        tpl_test.cpp
+#)
 find_package(nlohmann_json)
 find_package(protobuf)
 find_package(inja REQUIRED)
+find_package(llama-cpp REQUIRED)
 
 
 add_library(proto-test OBJECT proto/test.proto)
@@ -28,5 +39,5 @@ protobuf_generate(
 foreach(_test_file ${TEST_SRC_FILES})
     get_filename_component(_test_name ${_test_file} NAME_WE)
     add_executable(${_test_name} ${_test_file})
-    target_link_libraries(${_test_name} PUBLIC nlohmann_json::nlohmann_json protobuf::protobuf pantor::inja proto-test)
+    target_link_libraries(${_test_name} PUBLIC nlohmann_json::nlohmann_json protobuf::protobuf pantor::inja proto-test llama-cpp::llama-cpp)
 endforeach()
