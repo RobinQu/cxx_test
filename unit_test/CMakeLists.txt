@@ -19,6 +19,8 @@ find_package(protobuf)
 find_package(inja REQUIRED)
 find_package(llama-cpp REQUIRED)
 
+add_library(reranker INTERFACE reranker/bge_m3.hpp reranker/tokenizer.hpp
+        reranker/config.hpp)
 
 add_library(proto-test OBJECT proto/test.proto)
 target_link_libraries(proto-test PUBLIC
@@ -39,5 +41,5 @@ protobuf_generate(
 foreach(_test_file ${TEST_SRC_FILES})
     get_filename_component(_test_name ${_test_file} NAME_WE)
     add_executable(${_test_name} ${_test_file})
-    target_link_libraries(${_test_name} PUBLIC nlohmann_json::nlohmann_json protobuf::protobuf pantor::inja proto-test llama-cpp::llama-cpp)
+    target_link_libraries(${_test_name} PUBLIC nlohmann_json::nlohmann_json protobuf::protobuf pantor::inja proto-test llama-cpp::llama-cpp reranker)
 endforeach()
