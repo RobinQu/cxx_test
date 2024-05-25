@@ -1076,9 +1076,9 @@ protected:
         ggml_build_forward_expand(ctx.g_cgraph, r);
         ggml_graph_compute_with_ctx(ctx.g_ctx, ctx.g_cgraph, n_threads);
 
-
+#ifdef GGML_PERF
         ggml_graph_print(ctx.g_cgraph);
-
+#endif
         return r;
     }
 

@@ -7,7 +7,7 @@
 
 
 static float get_rank_score(tokenizer::BaseTokenizer* tokenizer, BGEM3RerankerModel* model, const std::string &q, const std::string& a) {
-    GenerationConfig generationConfig {.num_threads = 1};
+    GenerationConfig generationConfig {};
     std::vector<int> ids;
     tokenizer->encode_qa(q, a, ids);
     return model->GetScore(generationConfig, ids);
