@@ -17,10 +17,20 @@ file(GLOB_RECURSE TEST_SRC_FILES *.cpp)
 find_package(nlohmann_json)
 find_package(protobuf)
 find_package(inja REQUIRED)
-find_package(llama-cpp REQUIRED)
+#find_package(llama-cpp REQUIRED)
+
+include(FetchContent)
+FetchContent_Declare(
+        ggml
+        GIT_REPOSITORY https://github.com/ggerganov/ggml.git
+        GIT_TAG f5c9599
+)
+FetchContent_MakeAvailable(ggml)
+
 
 add_library(reranker INTERFACE reranker/bge_m3.hpp reranker/tokenizer.hpp
         reranker/config.hpp)
+target_link_libraries(reranker INTERFACE ggml)
 
 add_library(proto-test OBJECT proto/test.proto)
 target_link_libraries(proto-test PUBLIC
@@ -41,5 +51,5 @@ protobuf_generate(
 foreach(_test_file ${TEST_SRC_FILES})
     get_filename_component(_test_name ${_test_file} NAME_WE)
     add_executable(${_test_name} ${_test_file})
-    target_link_libraries(${_test_name} PUBLIC nlohmann_json::nlohmann_json protobuf::protobuf pantor::inja proto-test llama-cpp::llama-cpp reranker)
+    target_link_libraries(${_test_name} PUBLIC nlohmann_json::nlohmann_json protobuf::protobuf pantor::inja proto-test reranker)
 endforeach()

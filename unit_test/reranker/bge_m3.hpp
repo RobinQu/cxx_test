@@ -88,7 +88,7 @@ protected:
 
 class Linear: public Block {
 public:
-    Linear(ggml_tensor *weight = nullptr, ggml_tensor *bias = nullptr) : weight(weight), bias(bias) {}
+    explicit Linear(ggml_tensor *weight = nullptr, ggml_tensor *bias = nullptr) : weight(weight), bias(bias) {}
 
     Linear(InitContext* init_context ,int in_features, int out_features, bool use_bias = true):
             Linear(init_context, in_features, out_features, nullptr, use_bias)
@@ -156,7 +156,12 @@ public:
             position_weight(ggml_new_tensor_2d(init_context->g_ctx, init_context->dtype, embedding_dim, pos_max)),
             indices(ggml_new_tensor_1d(init_context->g_ctx, GGML_TYPE_I32, pos_max)),
             ln(init_context, embedding_dim),
-            pad_index(2) {}
+            pad_index(2) {
+        indices->data = new char[ggml_nbytes(indices)];
+        auto *p = (int32_t *)indices->data;
+        for (int i = 0; i < pos_max; i++)
+            p[i] = i;
+    }
 
     ggml_tensor *Forward(ForwardContext *ctx, ggml_tensor *input, int n_past) override {
         int qlen = (int)input->ne[0];
@@ -345,9 +350,9 @@ protected:
     }
 
 
-    virtual void save_to_cache(ForwardContext *ctx, const int kv_hidden_size, const int n_past, const int qlen, ggml_tensor *k, ggml_tensor *v) = 0;
-    virtual ggml_tensor *get_k_from_cache(ForwardContext *ctx, const int hidden_size, const int n_past, const int qlen) = 0;
-    virtual ggml_tensor *get_v_from_cache(ForwardContext *ctx, const int hidden_size, const int n_past, const int qlen) = 0;
+    virtual void save_to_cache(ForwardContext *ctx, int kv_hidden_size, int n_past, int qlen, ggml_tensor *k, ggml_tensor *v) = 0;
+    virtual ggml_tensor *get_k_from_cache(ForwardContext *ctx, int hidden_size, int n_past, int qlen) = 0;
+    virtual ggml_tensor *get_v_from_cache(ForwardContext *ctx, int hidden_size, int n_past, int qlen) = 0;
 
     ggml_tensor *cross_attention(ForwardContext *ctx, const int hidden_size, const int n_past, const int qlen,
                                  ggml_tensor *q, ggml_tensor *k, ggml_tensor *v) {
@@ -488,7 +493,7 @@ public:
         return attn_output;
     }
 
-    ggml_tensor *get_last_attn_scores(void)
+    ggml_tensor *get_last_attn_scores()
     {
         return last_attn_scores;
     }
@@ -699,6 +704,7 @@ public:
 
 
 class XLMRoberta: public Block {
+    Config config_;
 public:
     XLMRoberta(InitContext* init_context, const Config& config):
             config_(config),
@@ -740,9 +746,6 @@ private:
         ggml_tensor *transformer_outputs = final.Forward(ctx, hidden_states);
         return transformer_outputs;
     }
-
-
-    Config config_;
 
 };
 
@@ -794,7 +797,7 @@ ggml_tensor * ggml_init_tensor(struct ggml_tensor *tensor,
 
     *result = ggml_tensor {
             /*.type         =*/ type,
-            /*.backend      =*/ GGML_BACKEND_CPU,
+            /*.backend      =*/ GGML_BACKEND_TYPE_CPU,
             /*.buffer       =*/ NULL,
             /*.ne           =*/ { 1, 1, 1, 1 },
             /*.nb           =*/ { 0, 0, 0, 0 },
@@ -832,10 +835,10 @@ ggml_tensor * ggml_init_tensor(struct ggml_tensor *tensor,
 
 class ModelLoader {
 public:
+    std::unique_ptr<MappedFile> mapped_file;
     const char *const data;
     size_t size;
     const char *ptr;
-    std::unique_ptr<MappedFile> mapped_file;
 
     size_t offset_config;
     size_t offset_tokenizer;
@@ -859,7 +862,7 @@ public:
 
     }
 
-    int64_t tell() const { return ptr - data; }
+    [[nodiscard]] int64_t tell() const { return ptr - data; }
 
     void seek(int64_t offset, int whence) {
         if (whence == SEEK_SET)
@@ -895,10 +898,7 @@ public:
             // read and check tensor name
             int name_size = read_basic<int>();
             GGML_ASSERT(name_size == (int)name.size());
-//                    << "tensor " << name << " name size mismatch: expect " << name.size() << " but got " << name_size
-//                    << "(part of name: " << read_string(name.size()) << ")";
             std::string weight_name = read_string(name_size);
-//            CHATLLM_CHECK(weight_name == name) << "tensor name mismatch: expect " << name << " but got " << weight_name;
             GGML_ASSERT(weight_name == name);
         }
 
@@ -914,13 +914,10 @@ public:
                 n_dims = 2;
 
             GGML_ASSERT(ndim == n_dims);
-//                    << "tensor " << name << " ndim mismatch: expect " << n_dims << " but got " << ndim;
             for (int i = ndim - 1; i >= 0; i--)
             {
                 int dim_size = read_basic<int>();
                 GGML_ASSERT(dim_size == tensor->ne[i]);
-//                << "tensor " << name << " shape mismatch at dim " << i
-//                 << ": expect " << tensor->ne[i] << " but got " << dim_size;
             }
         }
 
@@ -928,7 +925,6 @@ public:
         {
             auto dtype = (ggml_type)read_basic<int>();
             GGML_ASSERT(dtype == tensor->type);
-//                    << "tensor " << name << " dtype mismatch: expect " << tensor->type << " but got " << dtype;
         }
 
         // map tensor data
@@ -942,7 +938,7 @@ public:
 
     void load_all_tensors() {
         tensor_dict.clear(); //return;
-        ggml_tensor t;
+        ggml_tensor t {};
 
         while (tell() < (int64_t)size)
         {
@@ -967,7 +963,7 @@ public:
             }
 
             // read and check tensor dtype
-            ggml_type dtype = (ggml_type)read_basic<int>();
+            auto dtype = (ggml_type)read_basic<int>();
 
             ggml_init_tensor(&t, dtype, ndim, ne);
 
@@ -1080,17 +1076,13 @@ protected:
         ggml_build_forward_expand(ctx.g_cgraph, r);
         ggml_graph_compute_with_ctx(ctx.g_ctx, ctx.g_cgraph, n_threads);
 
-#ifdef GGML_PERF
-        ggml_graph_print(&ctx.gf);
-#endif
+
+        ggml_graph_print(ctx.g_cgraph);
+
         return r;
     }
 
-    XLMRoberta transformer_;
-    size_t GRAPH_SIZE;
-    bool batch_input;
-    float logit_scale;
-    std::vector<int> layer_ids;
+
 
 private:
     Config config_;
@@ -1099,6 +1091,13 @@ private:
     size_t scratch_size_;
     std::unique_ptr<char[]> scratch_buffer_; // intermediate tensor buffer
     InitContext w_ctx_; // weight context
+
+public:
+    XLMRoberta transformer_;
+    size_t GRAPH_SIZE;
+    bool batch_input;
+    float logit_scale;
+    std::vector<int> layer_ids;
 };
 
 

@@ -23,7 +23,7 @@ class CXXTestRecipe(ConanFile):
         self.requires("cpp-httplib/0.15.3")
         # self.requires("jinja2cpp/1.2.1")
         self.requires("inja/3.4.0")
-        self.requires("llama-cpp/b2038")
+        # self.requires("llama-cpp/b2038")
 
     def layout(self):
         cmake_layout(self)
