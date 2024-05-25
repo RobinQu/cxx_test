@@ -17,8 +17,7 @@
 #include "config.hpp"
 
 
-
-namespace tokenizer {
+namespace transformer::tokenizer {
 
     enum token_type {
         UNDEFINED = 0,
@@ -200,7 +199,7 @@ namespace tokenizer {
 
     class BaseTokenizer {
     public:
-        BaseTokenizer(const Config &config) :
+        explicit BaseTokenizer(const Config &config) :
                 bos_token_id(config.bos_token_id),
                 eos_token_id(config.eos_token_id),
                 pad_token_id(config.pad_token_id),
@@ -275,7 +274,7 @@ namespace tokenizer {
         Processor *tp;
     protected:
 //    std::string sys_prompt;
-        int history_offset;
+//        int history_offset;
         const int max_length;
         bool auto_add_bos;
         std::set<int> terminate_ids;
@@ -519,43 +518,6 @@ namespace tokenizer {
     };
 
 
-    class UnigramTokenizer : public BaseTokenizer {
-    public:
-        explicit UnigramTokenizer(const Config &config) : BaseTokenizer(config) {}
-
-        size_t load(const char *buffer, int n_vocab) override {
-            tp = new UnigramProcessor(eos_token_id + 1);
-            tp->RegisterPreprocessor(new TextPrepNewlineToSpaces());
-            tp->RegisterPreprocessor(new TextPrepDeleteMultiSpaces());
-            tp->RegisterPreprocessor(new TextPrepAddLeadingSpace());
-            size_t size = tp->Load(buffer, n_vocab);
-
-            return size;
-        }
-
-        void encode(const std::string &text, std::vector<int> &ids) const override {
-            // position embedding offset = 2
-            encode(text, ids, true, true, max_length - 2);
-        }
-
-
-    protected:
-        void encode(const std::string &text, std::vector<int> &ids, bool add_bos, bool add_eos, int max_length) const {
-            if (add_bos) max_length--;
-            if (add_eos) max_length--;
-
-            if (add_bos)
-                ids.push_back(bos_token_id);
-            size_t start = ids.size();
-            BaseTokenizer::encode(text, ids);
-            size_t length = ids.size() - start;
-            if ((max_length > 0) && ((int) length > max_length))
-                ids.resize(start + max_length);
-
-            if (add_eos)
-                ids.push_back(eos_token_id);
-        }
-    };
 
 }
 

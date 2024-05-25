@@ -17,7 +17,6 @@ file(GLOB_RECURSE TEST_SRC_FILES *.cpp)
 find_package(nlohmann_json)
 find_package(protobuf)
 find_package(inja REQUIRED)
-#find_package(llama-cpp REQUIRED)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -29,7 +28,10 @@ FetchContent_MakeAvailable(ggml)
 
 
 add_library(reranker INTERFACE reranker/bge_m3.hpp reranker/tokenizer.hpp
-        reranker/config.hpp)
+        reranker/config.hpp
+        reranker/layers.hpp
+        reranker/ops.hpp
+        reranker/model.hpp)
 target_link_libraries(reranker INTERFACE ggml)
 
 add_library(proto-test OBJECT proto/test.proto)

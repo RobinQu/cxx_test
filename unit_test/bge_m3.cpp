@@ -2,11 +2,11 @@
 // Created by RobinQu on 2024/5/22.
 //
 #include "reranker/bge_m3.hpp"
-#include "reranker/config.hpp"
-#include "reranker/tokenizer.hpp"
+
+using namespace transformer::models::bge;
 
 
-static float get_rank_score(tokenizer::BaseTokenizer* tokenizer, BGEM3RerankerModel* model, const std::string &q, const std::string& a) {
+static float get_rank_score(BaseTokenizer* tokenizer, BGEM3RerankerModel* model, const std::string &q, const std::string& a) {
     GenerationConfig generationConfig {};
     std::vector<int> ids;
     tokenizer->encode_qa(q, a, ids);
@@ -40,7 +40,7 @@ int main() {
     // load tokenizer
     loader.offset_tokenizer = loader.tell();
     loader.seek(loader.offset_tokenizer, SEEK_SET);
-    auto *tokenizer = new tokenizer::UnigramTokenizer(config);
+    auto *tokenizer = new Tokenizer(config);
     auto proto_size = tokenizer->load(loader.data + loader.tell(), config.vocab_size);
     loader.seek(proto_size, SEEK_CUR);
 
