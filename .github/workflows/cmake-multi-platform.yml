@@ -43,17 +43,20 @@ jobs:
           #   c_compiler: clang
           - os: ubuntu-latest
             c_compiler: cl
-
     steps:
     - uses: actions/checkout@v4
-
     - name: Set reusable strings
       # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
       id: strings
       shell: bash
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-
+    - name: "Update gcc"
+      if: matrix.os == "ubuntu-latest"
+      run: |
+        apt-get -y update && \
+        apt-get install -y build-essential gcc-12 g++-12 && \
+        update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12 --slave /usr/bin/g++ g++ /usr/bin/g++-12
     - name: Get Conan
       uses: turtlebrowser/get-conan@v1.2
       with:
@@ -66,7 +69,6 @@ jobs:
       with:
         path: "~/.conan2"
         key: ${{ matrix.os }}-${{ matrix.build_type }}-${{matrix.cpp_compiler}}
-
     - name: Conan install
       run: conan install conanfile.py --build=missing
     - name: Conan build (with ctest)
