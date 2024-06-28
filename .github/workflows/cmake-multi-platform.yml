@@ -58,7 +58,9 @@ jobs:
       uses: turtlebrowser/get-conan@v1.2
       with:
         version: 2.4.1
-    
+    - name: Create conan profile
+      run: |
+        conan profile detect
     - name: Cache
       uses: actions/cache@v4.0.2
       with:
