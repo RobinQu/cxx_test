@@ -31,12 +31,8 @@ jobs:
             c_compiler: clang
             cpp_compiler: clang++
         exclude:
-          # - os: windows-latest
-          #   c_compiler: gcc
-          # - os: windows-latest
-          #   c_compiler: clang
-          - os: ubuntu-latest
-            c_compiler: cl
+          - os: macos-latest
+            c_compiler: gcc
     steps:
     - uses: actions/checkout@v4
 
@@ -66,7 +62,7 @@ jobs:
         key: ${{ matrix.os }}-${{ matrix.build_type }}-${{matrix.cpp_compiler}}
 
     - name: Download conan profile
-      run: wget -O ~/.conan2/profiles/default https://github.com/RobinQu/instinct-cpp-github-workflow/raw/main/conan/profiles/${{ matrix.os }}-${{matrix.cpp_compiler}}-${{matrix.build_type}}.yaml
+      run: mkdir -p ~/.conan2/profiles && wget -O ~/.conan2/profiles/default https://github.com/RobinQu/instinct-cpp-github-workflow/raw/main/conan/profiles/${{ matrix.os }}-${{matrix.cpp_compiler}}-${{matrix.build_type}}.yaml
 
     - name: Conan install
       run: conan install conanfile.py --build=missing
