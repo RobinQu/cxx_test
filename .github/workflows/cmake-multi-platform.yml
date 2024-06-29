@@ -4,7 +4,12 @@ name: CMake on multiple platforms
 
 on:
   push:
-    branches: [ "main" ]
+    paths:
+      - '.github/workflow/**'
+      - 'modules/**'
+    branches: 
+      - "main"
+      - "sprint/**"
   pull_request:
     branches: [ "main" ]
 
