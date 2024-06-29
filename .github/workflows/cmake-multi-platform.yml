@@ -59,7 +59,7 @@ jobs:
         version: 2.4.1
 
     - name: Get Conan (macOS)
-      if: maxtrix.os == 'macos-latest'
+      if: matrix.os == 'macos-latest'
       run: brew install conan
   
     - name: Cache
